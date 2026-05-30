@@ -29,14 +29,22 @@ rekap hari ini
 ```text
 skills/moneyclip/
 ├─ SKILL.md
-├─ setup.md
-├─ runtime.md
-├─ sheets-schema.md
-├─ examples.md
-└─ README.md
+├─ README.md
+└─ references/
+   ├─ setup.md
+   ├─ runtime.md
+   ├─ sheets-schema.md
+   └─ examples.md
 ```
 
-`SKILL.md` is the entrypoint and router. It tells Hermes which supporting file to use.
+`SKILL.md` is the entrypoint and router. Hermes should load reference files only when needed.
+
+## Reference loading
+
+- Setup flow: `references/setup.md`
+- Sheet schema: `references/sheets-schema.md`
+- Daily tracking: `references/runtime.md`
+- Examples: `references/examples.md`
 
 ## Setup experience
 
@@ -52,7 +60,7 @@ After the user provides the sheet, Hermes prepares the required tabs and headers
 
 MoneyClip supports two storage modes:
 
-1. Direct Google Sheet editing, if Hermes has the right tool and access.
+1. Direct Google Sheet editing, preferably through Google Workspace Sheets tooling when available.
 2. HTTP endpoint mode using `moneyclip.sheet_url`, usually a Google Apps Script Web App.
 
 ## Required tabs
@@ -61,7 +69,7 @@ MoneyClip supports two storage modes:
 - `Saldo`
 - `State`
 
-See `sheets-schema.md` for exact headers.
+See `references/sheets-schema.md` for exact headers.
 
 ## Runtime behavior
 
