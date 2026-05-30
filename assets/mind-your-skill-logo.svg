@@ -1,0 +1,60 @@
+<svg width="1600" height="520" viewBox="0 0 1600 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Mind Your Skill</title>
+  <desc id="desc">Abstract logo and wordmark for Mind Your Skill, an open-source skill library for Hermes Agent.</desc>
+  <defs>
+    <linearGradient id="g1" x1="110" y1="90" x2="420" y2="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14E0FF"/>
+      <stop offset="0.45" stop-color="#2474FF"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="235" y1="105" x2="405" y2="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0FE3FF"/>
+      <stop offset="0.52" stop-color="#1463FF"/>
+      <stop offset="1" stop-color="#07135F"/>
+    </linearGradient>
+    <linearGradient id="g3" x1="175" y1="155" x2="315" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#33E7FF"/>
+      <stop offset="0.5" stop-color="#2A72FF"/>
+      <stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="20" flood-color="#07135F" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="520" fill="#FFFFFF"/>
+
+  <g transform="translate(65 70)" filter="url(#soft)">
+    <!-- abstract human-thought orbit -->
+    <path d="M75 247C105 158 188 92 286 92C349 92 405 119 445 162" stroke="#07135F" stroke-width="7" stroke-linecap="round" opacity="0.95"/>
+    <path d="M80 251C117 360 237 430 356 392C410 375 455 341 486 297" stroke="url(#g1)" stroke-width="7" stroke-linecap="round"/>
+    <path d="M48 245C86 222 124 209 164 204" stroke="#07135F" stroke-width="5" stroke-linecap="round" opacity="0.86"/>
+    <path d="M374 115C452 162 495 246 483 333" stroke="#14C7F4" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 15"/>
+
+    <!-- central abstract form -->
+    <path d="M178 330C151 252 186 165 260 129C310 105 367 109 413 139C385 140 362 158 356 184C348 222 382 250 413 235C392 320 316 373 236 358C215 354 195 344 178 330Z" fill="url(#g3)"/>
+    <path d="M307 106C379 132 426 203 414 279C409 315 392 348 366 373C391 286 342 214 273 203C231 196 192 212 162 240C177 176 228 126 307 106Z" fill="url(#g2)" opacity="0.98"/>
+    <path d="M162 241C190 207 230 190 274 197C326 205 367 242 381 293C342 238 267 236 215 285C191 308 177 336 176 364C152 331 144 285 162 241Z" fill="#FFFFFF" opacity="0.98"/>
+
+    <!-- inner spark -->
+    <path d="M260 210L276 253L319 269L276 285L260 329L243 285L201 269L243 253L260 210Z" fill="#16C6F3"/>
+    <path d="M260 228L271 257L300 269L271 280L260 310L248 280L219 269L248 257L260 228Z" fill="#FFFFFF" opacity="0.35"/>
+
+    <!-- nodes/pixels -->
+    <circle cx="64" cy="249" r="18" fill="#2474FF"/>
+    <circle cx="146" cy="170" r="15" fill="#14C7F4"/>
+    <circle cx="405" cy="365" r="20" fill="#7C3AED"/>
+    <circle cx="363" cy="157" r="24" fill="#07135F"/>
+    <circle cx="150" cy="430" r="17" fill="#7C3AED"/>
+    <rect x="174" y="102" width="33" height="33" rx="5" fill="#2474FF"/>
+    <rect x="238" y="68" width="40" height="40" rx="6" fill="#2474FF"/>
+    <rect x="282" y="97" width="20" height="20" rx="4" fill="#14C7F4"/>
+    <rect x="266" y="40" width="14" height="14" rx="3" fill="#145AF2"/>
+    <rect x="308" y="60" width="16" height="16" rx="3" fill="#145AF2"/>
+  </g>
+
+  <g transform="translate(555 163)">
+    <text x="0" y="78" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="94" font-weight="800" letter-spacing="-3" fill="#07135F">Mind Your Skill</text>
+    <text x="4" y="168" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="42" font-weight="500" letter-spacing="1" fill="#51627D">Open-source skill library for Hermes Agent</text>
+  </g>
+</svg>
