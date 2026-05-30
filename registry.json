@@ -1,0 +1,13 @@
+{
+  "name": "mind-your-skill",
+  "version": "0.1.0",
+  "skills": [
+    {
+      "name": "moneyclip",
+      "version": "4.4.0",
+      "status": "beta",
+      "path": "skills/moneyclip/SKILL.md",
+      "category": "productivity"
+    }
+  ]
+}
