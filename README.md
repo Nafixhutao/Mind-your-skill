@@ -1,23 +1,69 @@
-# Mind Your Skill
+<p align="center">
+  <img src="assets/mind-your-skill-logo.svg" alt="Mind Your Skill — open-source skill library for Hermes Agent" width="100%" />
+</p>
 
-**Mind Your Skill** is an open-source skill library for Hermes Agent.
+<p align="center">
+  <strong>Open-source skill library for Hermes Agent.</strong><br />
+  Modular skills that teach agents how to work — not just how to reply.
+</p>
 
-This repository is designed as a curated collection of modular agent skills: each skill has a clear entrypoint, setup flow, runtime behavior, examples, and security notes.
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-0f172a.svg"></a>
+  <img alt="Status" src="https://img.shields.io/badge/status-beta-2563eb.svg">
+  <img alt="Hermes Agent" src="https://img.shields.io/badge/Hermes-Agent-7c3aed.svg">
+  <img alt="Skill Library" src="https://img.shields.io/badge/skill%20library-modular-06b6d4.svg">
+</p>
 
-## Philosophy
+---
 
-Skills should help agents work consistently, not just reply creatively.
+## What is Mind Your Skill?
 
-A good skill should be:
+**Mind Your Skill** is a curated open-source skill library for **Hermes Agent**.
 
-- Modular
-- Easy to audit
-- Safe by default
-- Token-aware
-- Clear for first-time users
-- Reliable during repeated runtime use
+The goal is simple: make agents more useful, consistent, and reusable through modular skill packages. Each skill has a clear entrypoint, focused references, setup flow, runtime behavior, examples, and security notes.
 
-## Repository structure
+This repository is designed for skills that feel production-minded: easy to inspect, easy to extend, and practical for real workflows.
+
+## Available Skills
+
+### MoneyClip
+
+**MoneyClip** is a personal expense tracking skill for Indonesian daily chat patterns.
+
+It helps users:
+
+- set starting cash balance
+- record daily spending
+- infer expense categories
+- parse Indonesian amount shorthand like `rb`, `k`, and `jt`
+- prepare Google Sheet storage during first setup
+- show remaining balance after each transaction
+- support recap, edit, and delete flows
+
+Entrypoint:
+
+```text
+skills/moneyclip/SKILL.md
+```
+
+Documentation:
+
+```text
+skills/moneyclip/README.md
+```
+
+## MoneyClip in action
+
+```text
+User: pakai moneyclip
+Agent: Kirim link Google Sheet untuk MoneyClip ya. Pastikan aksesnya Editor.
+
+User: makan 25rb
+Agent: ✅ makan Rp25.000
+       💰 Sisa: Rp175.000
+```
+
+## Repository Structure
 
 ```text
 Mind-your-skill/
@@ -27,104 +73,47 @@ Mind-your-skill/
 ├─ CONTRIBUTING.md
 ├─ SECURITY.md
 ├─ CODE_OF_CONDUCT.md
+├─ assets/
+│  └─ mind-your-skill-logo.svg
 └─ skills/
    └─ moneyclip/
       ├─ SKILL.md
       ├─ README.md
-      ├─ setup.md
-      ├─ runtime.md
-      ├─ sheets-schema.md
-      └─ examples.md
+      └─ references/
+         ├─ setup.md
+         ├─ runtime.md
+         ├─ sheets-schema.md
+         └─ examples.md
 ```
 
-## Available skills
+## Skill Philosophy
 
-### MoneyClip
+Skills should help agents work consistently, not just respond creatively.
 
-MoneyClip is a personal expense tracking skill for Indonesian daily chat patterns.
+A good skill should be:
 
-It can:
+- **modular** — separate setup, runtime, examples, and references
+- **auditable** — clear instructions and explicit permissions
+- **safe by default** — no hidden endpoint or destructive behavior
+- **token-aware** — load only the smallest relevant reference
+- **beginner-friendly** — guide first-time users without manual docs overload
+- **repeatable** — behave reliably across daily use
 
-- Guide first-time setup with a Google Sheet link
-- Prepare required Google Sheet tabs and headers
-- Set starting cash balance
-- Record daily spending
-- Infer expense categories
-- Handle Indonesian amount shorthand like `rb`, `k`, and `jt`
-- Show remaining balance
-- Support recap, edit, and delete flows
+## Hermes-style Progressive Loading
 
-Skill entrypoint:
+Mind Your Skill follows a modular pattern designed for Hermes Agent:
 
-```text
-skills/moneyclip/SKILL.md
-```
+- `SKILL.md` is the entrypoint and router.
+- `references/setup.md` is loaded only during first-run setup.
+- `references/runtime.md` is loaded for daily use.
+- `references/sheets-schema.md` is loaded only when preparing Google Sheets.
+- `references/examples.md` is loaded only when examples are needed.
 
-Skill documentation:
-
-```text
-skills/moneyclip/README.md
-```
-
-## MoneyClip example
-
-User:
-
-```text
-pakai moneyclip
-```
-
-Agent:
-
-```text
-Kirim link Google Sheet untuk MoneyClip ya. Pastikan aksesnya Editor.
-```
-
-User:
-
-```text
-makan 25rb
-```
-
-Agent:
-
-```text
-✅ makan Rp25.000
-💰 Sisa: Rp175.000
-```
-
-## Skill package model
-
-Each skill should be organized as a package under `skills/<skill-name>/`.
-
-Recommended files:
-
-```text
-skills/<skill-name>/
-├─ SKILL.md        # entrypoint and router
-├─ README.md       # human documentation
-├─ setup.md        # first-run setup flow
-├─ runtime.md      # compact daily-use behavior
-├─ examples.md     # optional examples
-└─ changelog.md    # optional version history
-```
-
-`SKILL.md` should stay short. Long tutorials, examples, schemas, and implementation details should live in supporting files.
-
-## Token-aware design
-
-Mind Your Skill follows a modular pattern:
-
-- Setup instructions are used only during setup.
-- Runtime instructions are compact and used for daily behavior.
-- Examples are used only when users ask for help.
-- README files are for humans and should not be treated as runtime instructions.
-
-This structure keeps skills easier to maintain and can reduce token usage in agents that support selective skill loading.
+This keeps common workflows lighter and easier to maintain.
 
 ## Security
 
-Skills may guide agents to edit files, write to spreadsheets, or call configured endpoints. For that reason, every skill should be auditable and explicit about permissions.
+Skills may guide agents to edit files, write to spreadsheets, or call configured endpoints. For that reason, every skill should be explicit about permissions and safe behavior.
 
 See `SECURITY.md` for the project security policy.
 
@@ -132,7 +121,7 @@ See `SECURITY.md` for the project security policy.
 
 Contributions are welcome.
 
-Before adding a skill, read:
+Before adding or changing skills, read:
 
 ```text
 CONTRIBUTING.md
