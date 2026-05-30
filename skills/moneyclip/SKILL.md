@@ -1,7 +1,7 @@
 ---
 name: moneyclip
 description: Personal expense tracking skill for Hermes Agent. Guides first-run Google Sheet setup, then tracks balance and spending from Telegram messages.
-version: 4.5.0
+version: 4.6.0
 metadata:
   hermes:
     tags: [finance, expense-tracker, telegram, google-sheets, indonesia]
@@ -59,14 +59,23 @@ For Google Sheets operations, prefer Google Workspace CLI skills when they are a
 
 MoneyClip should own the expense-tracking logic. Spreadsheet tools should own spreadsheet operations.
 
+## Linked references
+
+Load only the reference file needed for the current task:
+
+- `references/setup.md` — first-run setup and Google Sheet link handling.
+- `references/sheets-schema.md` — required Google Sheet tabs and headers.
+- `references/runtime.md` — daily expense tracking after setup.
+- `references/examples.md` — examples and user guidance.
+
 ## Routing
 
 Use only the smallest relevant instruction file.
 
-- If `moneyclip.setup_complete` is not `true`, use `setup.md`.
-- If the user sends a Google Sheet link, use `setup.md` and `sheets-schema.md`.
-- If setup is complete and the user sends balance/spending/recap/edit/delete messages, use `runtime.md`.
-- If the user asks what the skill can do, use `examples.md`.
+- If `moneyclip.setup_complete` is not `true`, load `references/setup.md`.
+- If the user sends a Google Sheet link, load `references/setup.md` and `references/sheets-schema.md`.
+- If setup is complete and the user sends balance/spending/recap/edit/delete messages, load `references/runtime.md`.
+- If the user asks what the skill can do, load `references/examples.md`.
 - Do not read setup instructions during normal daily expense tracking unless setup is incomplete.
 
 ## Scope
