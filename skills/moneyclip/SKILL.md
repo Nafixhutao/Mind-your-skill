@@ -1,7 +1,7 @@
 ---
 name: moneyclip
 description: Personal expense tracking skill for Hermes Agent. Guides first-run Google Sheet setup, then tracks balance and spending from Telegram messages.
-version: 4.4.0
+version: 4.5.0
 metadata:
   hermes:
     tags: [finance, expense-tracker, telegram, google-sheets, indonesia]
@@ -9,6 +9,10 @@ metadata:
     mode: auto
     trigger: telegram.message
     requires_toolsets: [http, browser]
+    preferred_dependencies:
+      - googleworkspace/cli/gws-sheets
+      - googleworkspace/cli/gws-sheets-append
+      - googleworkspace/cli/gws-sheets-read
     config:
       - key: moneyclip.sheet_link
         description: Google Sheet link used by setup flow.
@@ -34,12 +38,26 @@ metadata:
 
 # MoneyClip
 
-MoneyClip is a Hermes Agent skill for personal daily expense tracking in Indonesian chat style.
+MoneyClip is the official expense tracking skill in this repository.
 
-It has two phases:
+Use this entrypoint only:
+
+`skills/moneyclip/SKILL.md`
+
+MoneyClip has two phases:
 
 1. **Setup phase** — ask for a Google Sheet link, prepare the required tabs, and mark setup as complete.
 2. **Runtime phase** — parse balance/spending messages, update storage, and reply with the remaining balance.
+
+## Tool preference
+
+For Google Sheets operations, prefer Google Workspace CLI skills when they are available:
+
+- `googleworkspace/cli/gws-sheets`
+- `googleworkspace/cli/gws-sheets-append`
+- `googleworkspace/cli/gws-sheets-read`
+
+MoneyClip should own the expense-tracking logic. Spreadsheet tools should own spreadsheet operations.
 
 ## Routing
 
