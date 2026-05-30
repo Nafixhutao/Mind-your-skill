@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/mind-your-skill-logo.svg" alt="Mind Your Skill — open-source skill library for Hermes Agent" width="100%" />
+  <img src="assets/mind-your-skill-logo.png" alt="Mind Your Skill — open-source skill library for Hermes Agent" width="100%" />
 </p>
 
 <p align="center">
