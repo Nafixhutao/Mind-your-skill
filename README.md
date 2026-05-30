@@ -1,87 +1,145 @@
 # Mind Your Skill
 
-Repository ini berisi skill **MoneyClip**, yaitu pencatat pengeluaran harian untuk Telegram.
+**Mind Your Skill** is an open-source skill library for Hermes Agent.
 
-## MoneyClip
+This repository is designed as a curated collection of modular agent skills: each skill has a clear entrypoint, setup flow, runtime behavior, examples, and security notes.
 
-MoneyClip membantu user mencatat uang keluar dari chat Telegram.
+## Philosophy
 
-Contoh pesan:
+Skills should help agents work consistently, not just reply creatively.
+
+A good skill should be:
+
+- Modular
+- Easy to audit
+- Safe by default
+- Token-aware
+- Clear for first-time users
+- Reliable during repeated runtime use
+
+## Repository structure
 
 ```text
-saldo 200rb
-makan 25rb
-bensin 50rb
-kemarin beli obat 30rb
-sisa berapa
-rekap hari ini
+Mind-your-skill/
+├─ README.md
+├─ registry.json
+├─ LICENSE
+├─ CONTRIBUTING.md
+├─ SECURITY.md
+├─ CODE_OF_CONDUCT.md
+└─ skills/
+   └─ moneyclip/
+      ├─ SKILL.md
+      ├─ README.md
+      ├─ setup.md
+      ├─ runtime.md
+      ├─ sheets-schema.md
+      └─ examples.md
 ```
 
-Contoh balasan:
+## Available skills
+
+### MoneyClip
+
+MoneyClip is a personal expense tracking skill for Indonesian daily chat patterns.
+
+It can:
+
+- Guide first-time setup with a Google Sheet link
+- Prepare required Google Sheet tabs and headers
+- Set starting cash balance
+- Record daily spending
+- Infer expense categories
+- Handle Indonesian amount shorthand like `rb`, `k`, and `jt`
+- Show remaining balance
+- Support recap, edit, and delete flows
+
+Skill entrypoint:
+
+```text
+skills/moneyclip/SKILL.md
+```
+
+Skill documentation:
+
+```text
+skills/moneyclip/README.md
+```
+
+## MoneyClip example
+
+User:
+
+```text
+pakai moneyclip
+```
+
+Agent:
+
+```text
+Kirim link Google Sheet untuk MoneyClip ya. Pastikan aksesnya Editor.
+```
+
+User:
+
+```text
+makan 25rb
+```
+
+Agent:
 
 ```text
 ✅ makan Rp25.000
 💰 Sisa: Rp175.000
 ```
 
-## File
+## Skill package model
 
-- `moneyclip.skill.md` — file skill utama.
-- `README.md` — tutorial dan penjelasan repo.
+Each skill should be organized as a package under `skills/<skill-name>/`.
 
-## Cara Kerja
-
-Skill ini adalah aturan/otak MoneyClip. Agar berjalan otomatis, skill perlu dipasang ke runner atau webhook Telegram.
-
-Flow ideal:
+Recommended files:
 
 ```text
-User kirim pesan Telegram
-→ Telegram Bot Webhook
-→ Runner membaca moneyclip.skill.md
-→ Runner parsing pesan
-→ Runner kirim action ke Google Apps Script
-→ Google Sheets update
-→ Bot balas sisa saldo
+skills/<skill-name>/
+├─ SKILL.md        # entrypoint and router
+├─ README.md       # human documentation
+├─ setup.md        # first-run setup flow
+├─ runtime.md      # compact daily-use behavior
+├─ examples.md     # optional examples
+└─ changelog.md    # optional version history
 ```
 
-## Config yang Dibutuhkan
+`SKILL.md` should stay short. Long tutorials, examples, schemas, and implementation details should live in supporting files.
 
-```yaml
-moneyclip.sheet_url: "URL Google Apps Script Web App"
-moneyclip.secret_token: "token rahasia untuk validasi request"
-moneyclip.timezone: "Asia/Jakarta"
-```
+## Token-aware design
 
-## Format Google Sheets
+Mind Your Skill follows a modular pattern:
 
-Buat 3 sheet.
+- Setup instructions are used only during setup.
+- Runtime instructions are compact and used for daily behavior.
+- Examples are used only when users ask for help.
+- README files are for humans and should not be treated as runtime instructions.
 
-### Pengeluaran
+This structure keeps skills easier to maintain and can reduce token usage in agents that support selective skill loading.
+
+## Security
+
+Skills may guide agents to edit files, write to spreadsheets, or call configured endpoints. For that reason, every skill should be auditable and explicit about permissions.
+
+See `SECURITY.md` for the project security policy.
+
+## Contributing
+
+Contributions are welcome.
+
+Before adding a skill, read:
 
 ```text
-ID | Timestamp | Tanggal | Jam | ChatID | MessageID | Deskripsi | Nominal | Kategori
+CONTRIBUTING.md
 ```
 
-### Saldo
+New skills should follow the modular structure and be added to `registry.json`.
 
-```text
-Tanggal | ChatID | Saldo Awal | Total Keluar | Sisa
-```
+## License
 
-### State
-
-```text
-ChatID | LastMessageID | LastDesc | LastAmount | LastTimestamp | LastEntryID
-```
-
-## Catatan Penting
-
-Skill tidak otomatis berjalan hanya karena file ada di GitHub. Otomatisasi membutuhkan:
-
-- Telegram Bot
-- Webhook atau runner
-- Google Apps Script endpoint
-- Google Sheets
-
-Setelah komponen itu tersambung, user tinggal kirim pesan Telegram dan MoneyClip akan mencatat otomatis.
+This project is licensed under the MIT License.
