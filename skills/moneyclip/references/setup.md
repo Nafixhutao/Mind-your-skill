@@ -1,78 +1,126 @@
 # MoneyClip Setup
 
-Use this file only when MoneyClip is not configured yet, when the user asks to set up MoneyClip, or when the user sends a Google Sheet link.
+Use this file only when MoneyClip is not configured yet or when the user asks to set up MoneyClip.
 
 ## Setup goal
 
-Prepare storage so MoneyClip can track balance and expenses.
+Prepare MoneyClip storage automatically through Google Sheets API helper scripts.
 
-Minimum setup is complete when either:
+Preferred setup path:
 
-- Hermes can directly edit the user's Google Sheet from `moneyclip.sheet_link`, or
-- `moneyclip.sheet_url` points to a working endpoint that stores MoneyClip actions.
+1. Authorize Google Sheets API once.
+2. Create a new MoneyClip Google Sheet automatically.
+3. Prepare required tabs and headers.
+4. Save `moneyclip.spreadsheet_id` and `moneyclip.spreadsheet_url`.
+5. Mark `moneyclip.setup_complete=true`.
+
+Do not rely on browser-based Google Sheets editing as the primary path.
+
+## Requirements
+
+Hermes needs terminal/script execution and Python dependencies from:
+
+```text
+skills/moneyclip/scripts/requirements.txt
+```
+
+Install if needed:
+
+```bash
+pip install -r skills/moneyclip/scripts/requirements.txt
+```
+
+The user also needs a local Google OAuth Desktop Client file at:
+
+```text
+~/.moneyclip/client_secret.json
+```
+
+Never ask the user to paste OAuth secrets into chat. The credential file must stay local.
 
 ## First message
 
-If no sheet link or endpoint is configured, ask:
+If setup is incomplete, say:
 
 ```text
-Kirim link Google Sheet untuk MoneyClip ya. Pastikan aksesnya Editor.
+Saya akan menyiapkan Google Sheet MoneyClip otomatis. Saya perlu izin Google Sheets sekali. Siapkan file OAuth client di ~/.moneyclip/client_secret.json, lalu saya jalankan authorization.
 ```
 
-If the user does not have a sheet yet, say:
+If the user has not prepared the OAuth client file, say:
 
 ```text
-Buat Google Sheet baru, share Anyone with the link sebagai Editor, lalu kirim linknya ke sini.
+Buat OAuth Desktop Client di Google Cloud, download sebagai client_secret.json, lalu simpan di ~/.moneyclip/client_secret.json. Jangan kirim file itu ke chat.
 ```
 
-## When the user sends a Google Sheet link
+## Authorization
 
-1. Treat the link as `moneyclip.sheet_link`.
-2. Open the sheet if Hermes has a browser or Google Sheets tool.
-3. Check whether edit access is available.
-4. Create or repair the required tabs using `references/sheets-schema.md`.
-5. If config persistence is available, save `moneyclip.sheet_link` and set `moneyclip.setup_complete=true`.
-6. Reply:
+Run:
+
+```bash
+python skills/moneyclip/scripts/google_auth.py
+```
+
+The script will open or print a Google authorization link. Ask the user to open it, choose their Google account, and allow access.
+
+After authorization succeeds, the script stores token locally at:
 
 ```text
-✅ Sheet MoneyClip siap.
+~/.moneyclip/token.json
+```
+
+Do not commit `client_secret.json` or `token.json` to GitHub.
+
+## Create Sheet automatically
+
+After authorization succeeds, run:
+
+```bash
+python skills/moneyclip/scripts/create_sheet.py
+```
+
+The script returns JSON containing:
+
+```json
+{
+  "ok": true,
+  "spreadsheet_id": "...",
+  "spreadsheet_url": "https://docs.google.com/spreadsheets/d/.../edit"
+}
+```
+
+Save:
+
+```text
+moneyclip.spreadsheet_id=<spreadsheet_id>
+moneyclip.spreadsheet_url=<spreadsheet_url>
+moneyclip.setup_complete=true
+```
+
+Then reply:
+
+```text
+✅ MoneyClip siap. Sheet sudah dibuat otomatis.
 Sekarang kirim: saldo 200rb
 ```
 
-## If edit access is denied
+## If authorization fails
 
 Reply:
 
 ```text
-Belum bisa edit Sheet. Ubah akses ke Anyone with the link → Editor, lalu kirim ulang linknya.
+Authorization Google belum berhasil. Cek file ~/.moneyclip/client_secret.json lalu coba lagi.
 ```
 
-## If Hermes cannot edit Google Sheets directly
+## If terminal execution is unavailable
 
 Reply:
 
 ```text
-Saya belum bisa mengedit Sheet langsung di mode ini. Saya pandu setup manualnya ya.
+Mode ini butuh terminal untuk menjalankan Google Sheets API helper. Jalankan setup di perangkat yang bisa menjalankan Python.
 ```
-
-Then show the required tabs and headers from `references/sheets-schema.md`.
-
-## Endpoint mode
-
-If Hermes requires HTTP storage instead of direct Sheet editing, MoneyClip needs `moneyclip.sheet_url`.
-
-If the endpoint is missing after the sheet is prepared, say:
-
-```text
-Sheet sudah siap. Untuk simpan otomatis, MoneyClip butuh Apps Script Web App endpoint.
-```
-
-If Hermes can create Apps Script automatically, create the endpoint and save it as `moneyclip.sheet_url`.
-
-If not, ask the user to provide the endpoint.
 
 ## Setup should not overwrite data
 
-If a required tab already exists, do not delete it. Only add missing headers or missing tabs.
+If the user already has an existing MoneyClip spreadsheet ID, do not create a new spreadsheet unless the user asks for a fresh setup.
 
-If existing data is present, preserve it.
+If using an existing spreadsheet, run `scripts/moneyclip_sheets.py` with action `setup` to repair missing headers.
