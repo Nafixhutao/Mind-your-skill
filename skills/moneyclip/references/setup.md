@@ -4,123 +4,96 @@ Use this file only when MoneyClip is not configured yet or when the user asks to
 
 ## Setup goal
 
-Prepare MoneyClip storage automatically through Google Sheets API helper scripts.
+Prepare MoneyClip storage so Hermes can record expenses automatically.
 
-Preferred setup path:
+Default setup path:
 
-1. Authorize Google Sheets API once.
-2. Create a new MoneyClip Google Sheet automatically.
-3. Prepare required tabs and headers.
-4. Save `moneyclip.spreadsheet_id` and `moneyclip.spreadsheet_url`.
-5. Mark `moneyclip.setup_complete=true`.
+1. User copies the MoneyClip Google Sheet template.
+2. User deploys the included Apps Script as a Web App.
+3. User sends the Web App URL to Hermes.
+4. Hermes tests the endpoint and saves `moneyclip.sheet_url`.
+5. Hermes sets `moneyclip.setup_complete=true`.
 
-Do not rely on browser-based Google Sheets editing as the primary path.
-
-## Requirements
-
-Hermes needs terminal/script execution and Python dependencies from:
-
-```text
-skills/moneyclip/scripts/requirements.txt
-```
-
-Install if needed:
-
-```bash
-pip install -r skills/moneyclip/scripts/requirements.txt
-```
-
-The user also needs a local Google OAuth Desktop Client file at:
-
-```text
-~/.moneyclip/client_secret.json
-```
-
-Never ask the user to paste OAuth secrets into chat. The credential file must stay local.
+This path does not require Google Cloud OAuth client files, Python, terminal, n8n, or manual tab creation.
 
 ## First message
 
-If setup is incomplete, say:
+If setup is incomplete and `moneyclip.sheet_url` is empty, load `references/template-setup.md` and guide the user through the template Web App setup.
+
+Say:
 
 ```text
-Saya akan menyiapkan Google Sheet MoneyClip otomatis. Saya perlu izin Google Sheets sekali. Siapkan file OAuth client di ~/.moneyclip/client_secret.json, lalu saya jalankan authorization.
+Kita pakai setup paling mudah: template MoneyClip + Apps Script Web App. Copy template, deploy Web App, lalu kirim URL /exec ke sini.
 ```
 
-If the user has not prepared the OAuth client file, say:
+If `moneyclip.template_url` is configured, include it.
+
+## When the user sends a Web App URL
+
+If the user sends a URL containing:
 
 ```text
-Buat OAuth Desktop Client di Google Cloud, download sebagai client_secret.json, lalu simpan di ~/.moneyclip/client_secret.json. Jangan kirim file itu ke chat.
+script.google.com/macros/s/
 ```
 
-## Authorization
+Treat it as `moneyclip.sheet_url`.
 
-Run:
-
-```bash
-python skills/moneyclip/scripts/google_auth.py
-```
-
-The script will open or print a Google authorization link. Ask the user to open it, choose their Google account, and allow access.
-
-After authorization succeeds, the script stores token locally at:
-
-```text
-~/.moneyclip/token.json
-```
-
-Do not commit `client_secret.json` or `token.json` to GitHub.
-
-## Create Sheet automatically
-
-After authorization succeeds, run:
-
-```bash
-python skills/moneyclip/scripts/create_sheet.py
-```
-
-The script returns JSON containing:
+Test the endpoint with a lightweight request:
 
 ```json
-{
-  "ok": true,
-  "spreadsheet_id": "...",
-  "spreadsheet_url": "https://docs.google.com/spreadsheets/d/.../edit"
-}
+{"action":"ping"}
 ```
 
-Save:
+If `ping` is unavailable, test:
+
+```json
+{"action":"setup"}
+```
+
+If the endpoint responds successfully, save:
 
 ```text
-moneyclip.spreadsheet_id=<spreadsheet_id>
-moneyclip.spreadsheet_url=<spreadsheet_url>
+moneyclip.sheet_url=<web_app_url>
 moneyclip.setup_complete=true
 ```
 
 Then reply:
 
 ```text
-✅ MoneyClip siap. Sheet sudah dibuat otomatis.
+✅ MoneyClip siap.
 Sekarang kirim: saldo 200rb
 ```
 
-## If authorization fails
+## If user sends a normal Google Sheet link
+
+Do not rely on browser-based Google Sheets editing as the main path.
 
 Reply:
 
 ```text
-Authorization Google belum berhasil. Cek file ~/.moneyclip/client_secret.json lalu coba lagi.
+Link Sheet biasa belum cukup untuk otomatis. MoneyClip butuh Web App URL dari Apps Script supaya bisa mencatat otomatis.
 ```
+
+Then load `references/template-setup.md`.
+
+## Advanced Google API helper mode
+
+Use the Google Sheets API helper scripts only if the user explicitly chooses advanced/local terminal mode.
+
+Advanced files:
+
+```text
+scripts/google_auth.py
+scripts/create_sheet.py
+scripts/moneyclip_sheets.py
+```
+
+Do not mention `client_secret.json` during the default setup unless the user chooses advanced mode.
 
 ## If terminal execution is unavailable
 
-Reply:
-
-```text
-Mode ini butuh terminal untuk menjalankan Google Sheets API helper. Jalankan setup di perangkat yang bisa menjalankan Python.
-```
+For default template setup, terminal is not required. Only HTTP access is needed to call the Web App endpoint after setup.
 
 ## Setup should not overwrite data
 
-If the user already has an existing MoneyClip spreadsheet ID, do not create a new spreadsheet unless the user asks for a fresh setup.
-
-If using an existing spreadsheet, run `scripts/moneyclip_sheets.py` with action `setup` to repair missing headers.
+The Apps Script template must preserve existing data. It may add missing tabs or headers, but it must not delete user data.
