@@ -2,43 +2,39 @@
 
 **Prepared for:** Project collaborators and stakeholders  
 **Date:** 2026-05-31  
-**Status:** Priority roadmap for v2.0+
+**Architecture:** Hermes Agent Skill  
+**Status:** Strategic roadmap for v2.0+
+
+> ⚠️ **Note:** This document is tailored to Hermes Agent architecture. Recommendations focus on **improving SKILL.md** and **reference documentation**, not building standalone applications or CLIs.
 
 ---
 
 ## Executive Summary
 
-Mind-your-skill is a well-designed foundational skill for personal finance tracking with conversational UX. However, current adoption is limited due to:
+Mind-your-skill is a well-designed Hermes Agent skill for personal finance tracking with excellent conversational UX. However, adoption is limited due to:
 
-1. **High onboarding friction** (technical setup required)
-2. **Minimal feature set** (ledger only, no budget/recurring transactions)
-3. **Rigid architecture** (Google Sheets locked-in)
-4. **Limited error recovery** (no undo/soft-delete)
-5. **Weak competitive positioning** (vs Ynab, Mint, Notion)
+1. **Complex setup experience** (many config variables required)
+2. **Minimal feature set** (ledger only; no budget tracking, recurring transactions, or undo)
+3. **Limited error handling** (append-only architecture makes corrections difficult)
+4. **Weak prompt engineering** (SKILL.md needs clearer intent detection logic)
+5. **Incomplete reference docs** (runtime.md and setup.md lack edge case handling)
 
-**Potential:** High, but requires strategic improvements across UX, features, and flexibility.
+**Potential:** High. Strategic improvements to SKILL.md, intent detection, and documentation can significantly improve adoption and user experience without architectural changes.
 
 ---
 
 ## 🎯 Problem Analysis
 
-### 1. Adoption Barrier Too High
+### 1. Setup Experience is Too Complex
 
 **Current State:**
-- Requires Hermes Agent ecosystem knowledge
-- Manual Google Service Account setup
-- Multiple environment variables to configure
-- No guided wizard or automation
+- Requires 7+ environment variables
+- Multiple authentication modes (OAuth, Service Account, Hermes runtime auth)
+- User must manually create Google Sheet and share with service account
+- No clear guidance on which auth mode to use
 
-**Impact:** 
-- 99% of personal finance users cannot discover this project
-- Even technical users spend 30+ minutes on setup
-- Error during setup = instant abandonment
-
-**Evidence from SKILL.md:**
-```
-requires_toolsets:
-  - google_sheets
+**SKILL.md Problems:**
+```yaml
 config:
   - FINANCE_SHEET_ID
   - FINANCE_TRANSACTIONS_SHEET_NAME
@@ -49,566 +45,803 @@ config:
   - GOOGLE_SERVICE_ACCOUNT_JSON
 ```
 
+**Impact:**
+- Users stuck at setup, never try the skill
+- No clear first-time-user experience
+- Error messages confusing (which auth failed?)
+
+**Examples of User Confusion:**
+```
+User tries skill → Hermes loads SKILL.md
+↓
+Agent checks Google auth → Not configured
+↓
+User: "Setup error. How do I fix?"
+↓
+System: "Configure GOOGLE_SERVICE_ACCOUNT_JSON"
+↓
+User: "I don't have that. What's a service account?"
+↓
+(User gives up)
+```
+
 ---
 
 ### 2. Feature Set is Too Minimal
 
-**Current Capabilities:**
-- ✅ Parse text expenses/income
-- ✅ OCR receipt reading
-- ✅ Save to Google Sheets
-- ✅ Basic summaries
-
-**Missing Features Users Need:**
+**Current Supported Intents (from runtime.md):**
 ```
-Feature                    | Current | Competitors
----------------------------|---------|------------------
-Budget tracking            | ❌      | YNAB, Mint ✅
-Alerts (over budget)       | ❌      | YNAB, Mint ✅
-Recurring transactions     | ❌      | YNAB, Mint ✅
-Undo/Soft-delete          | ❌      | Most apps ✅
-Multi-currency            | ⚠️ Basic| YNAB, Mint ✅
-Tax categorization        | ❌      | YNAB, Mint ✅
-Charts/Dashboard          | ❌      | All competitors ✅
-Multi-account support     | ❌      | YNAB, Mint ✅
-Bank sync                 | ❌      | YNAB, Plaid ✅
-Data export               | ❌      | All competitors ✅
-Sharing (family/partner)  | ❌      | YNAB, Mint ✅
+1. record_expense           ✅ Working
+2. record_income            ✅ Working
+3. record_receipt_expense   ✅ Working
+4. show_balance_summary     ✅ Working
+5. show_category_summary    ✅ Working
+6. show_transactions        ✅ Working
+7. update_transaction       ⚠️ Incomplete
+8. delete_transaction       ⚠️ Incomplete
+9. setup_check              ✅ Working
 ```
 
-**Real User Scenarios Not Supported:**
-
+**Missing Essential Intents:**
 ```
-User: "set budget groceries 1jt per month"
-System: ❌ Not supported
+❌ set_budget                    (no budget tracking)
+❌ check_budget_status           (no budget tracking)
+❌ alert_on_budget_exceed        (no alerts)
+❌ set_recurring_transaction     (no recurring support)
+❌ list_recurring_transactions   (no recurring support)
+❌ undo_transaction              (append-only architecture)
+❌ soft_delete_transaction       (hard delete only)
+❌ export_transactions           (no export support)
+❌ show_tax_summary              (no tax categorization)
+```
 
-User: "remind me to pay electricity bill 350rb next 28th"
-System: ❌ Not supported
+**Real User Scenarios Skill Can't Handle:**
+```
+User: "set budget makanan 1jt per bulan"
+Skill: ❌ "Maaf, saya tidak mengerti. Coba katakan: beli..."
 
-User: "gajian every 28th 5jt"
-System: ❌ Not supported
+User: "gajian setiap 28, 5jt"
+Skill: ❌ Not supported
 
 User: "undo transaksi kopi tadi"
-System: ❌ Append-only to Sheets
+Skill: ❌ Append-only to Sheets, no undo available
 
-User: "show me tax-deductible expenses"
-System: ❌ No tax categorization
+User: "export data bulan lalu"
+Skill: ❌ Not supported
 
-User: "reconcile with my bank account"
-System: ❌ No bank integration
+User: "show budget status"
+Skill: ❌ Not supported
 ```
 
 ---
 
-### 3. Architecture is Locked to One Backend
+### 3. Weak Intent Detection Logic in SKILL.md
 
-**Current Constraint:**
-- Hardcoded Google Sheets only
-- No abstraction layer for storage
-- No support for: Notion, Airtable, Excel, local databases, self-hosted options
+**Current Issues:**
 
-**Why This Matters:**
-- Privacy-conscious users rejected (data in Google)
-- Notion power-users rejected (can't integrate with their workspace)
-- Self-hosted users rejected (no local option)
-- Enterprise users rejected (no database support)
-
-**Evidence from architecture:**
-- `references/schema.md` assumes Google Sheets format
-- Direct Google Sheets append in runtime
-- No StorageProvider interface
-
----
-
-### 4. Error Recovery is Weak
-
-**Problems:**
-```
-Scenario 1: Duplicate transaction
-User: "beli kopi 15rb" (9:00 AM)
-System: Saved ✅
-
-User: "beli kopi 15rb" (10:30 AM)
-System: "Already exists today? Confirm save again?"
-Reality: User saved it twice anyway (append-only logic)
-
-Scenario 2: Wrong amount
-User: "gajian 5jt"
-System: Saved ✅
-User: "wait, was 5.5jt, not 5jt"
-System: ❌ No undo. Must manually edit Google Sheet.
-
-Scenario 3: OCR failed
-System: "Blurry receipt. Please type amount and merchant."
-User: (frustrated, deletes image)
-System: ❌ Lost receipt data
-```
-
-**Impact:**
-- Users lose trust in the system
-- Manual recovery required
-- No audit trail for corrections
-
----
-
-### 5. Documentation is Too Technical
-
-**Current State:**
-- `README.md` → targets deployers/developers
-- `SKILL.md` → Hermes protocol
-- `references/` → technical references
-- **Missing:** User guide, FAQ, troubleshooting
-
-**Real User Questions Not Answered:**
-- "Why isn't my receipt reading?"
-- "How do I connect my bank account?"
-- "Can I share this with my spouse?"
-- "What if I made a mistake?"
-- "How do I export my data?"
-
----
-
-### 6. No Onboarding Flow
-
-**Current Experience:**
-1. User accesses skill
-2. System checks credentials
-3. If missing → "Error: No auth configured"
-4. User abandoned
-
-**Better Experience:**
-1. First time → detect auth status
-2. Offer: "Want me to create a Google Sheet for you?"
-3. Auto-setup Sheet + validate access
-4. Welcome message + first transaction template
-5. Success celebration
-
----
-
-### 7. Weak Competitive Positioning
-
-**Comparison:**
-| Feature | YNAB | Mint | Notion | Mind-your-skill |
-|---------|------|------|--------|-----------------|
-| Text input | ❌ | ❌ | ❌ | ✅ |
-| Conversational UX | ❌ | ❌ | ❌ | ✅ |
-| Receipt OCR | ✅ | ✅ | ❌ | ⚠️ |
-| Budget tracking | ✅ | ✅ | ⚠️ | ❌ |
-| Bank sync | ✅ | ✅ | ❌ | ❌ |
-| Self-hosted | ❌ | ❌ | ✅ (Notion) | ❌ |
-| Open-source | ❌ | ❌ | ❌ | ✅ |
-
-**Current Positioning:** "Personal finance ledger in natural language"  
-**Problem:** This alone doesn't beat existing solutions.
-
----
-
-## ✅ Strategic Recommendations
-
-### Phase 1: Foundation (v1.0 - 2 weeks)
-
-**Goal:** Make setup beginner-friendly
-
-#### 1.1 Create Setup Wizard
-```bash
-# Instead of manual config:
-npx mind-your-skill-setup
-
-# Guided steps:
-? Google auth method (OAuth / Service Account)
-? Create new Sheet or use existing?
-? Sheet name: Personal Finance Ledger
-? Currency: IDR
-? Timezone: Asia/Jakarta
-
-# Auto-output: .env file
-```
-
-**Deliverable:**
-- `cli/setup-wizard.ts` — Interactive CLI tool
-- `docs/QUICK_START.md` — 5-minute setup guide
-- `scripts/install.sh` — One-liner installation
-
-#### 1.2 Improve First-Time UX
+**Issue 3.1: Ambiguous Intent Detection**
 ```markdown
-**SKILL.md update:**
-## On first activation
-- Check: Is Google auth available?
-- If no: Offer setup wizard link
-- If yes: Show welcome message
-- Prompt: "Try: 'beli kopi 15rb'"
+# From runtime.md
+
+## Supported intents
+
+Detect the user intent:
+
+1. `record_expense`
+2. `record_income`
+...
 ```
 
-**Deliverable:**
-- Update `SKILL.md` onboarding section
-- Add `docs/FIRST_TIME_USER.md`
+**Problem:** No decision tree. How does agent decide between:
+- `record_expense` vs `update_transaction`?
+- `delete_transaction` vs `show_transactions`?
+- User asks "hapus", does that mean delete or undo?
 
-#### 1.3 Add User-Facing Documentation
+**Issue 3.2: Missing Context in Error Messages**
 ```
-docs/
-├── QUICK_START.md
-├── USER_GUIDE.md
-├── FAQ.md
-├── TROUBLESHOOTING.md
-└── EXAMPLES.md
+Current (from runtime.md):
+"Saya belum menemukan nominal transaksi. Berapa jumlahnya?"
+
+Better would be:
+"Saya menemukan: 'bayar listrik'. Tapi berapa jumlahnya? (contoh: 350000 atau 350rb)"
 ```
 
-**Deliverable:**
-- `docs/USER_GUIDE.md` (step-by-step with screenshots)
-- `docs/FAQ.md` (20+ common questions)
-- `docs/TROUBLESHOOTING.md` (error solutions)
+**Issue 3.3: No Fallback Strategy**
+- What if user says something the skill doesn't understand?
+- Should skill defer to general conversation or decline?
+- Current: Silent failure, user confused
 
 ---
 
-### Phase 2: Core Features (v2.0 - 4 weeks)
+### 4. Incomplete Error Handling
 
-**Goal:** Add essential missing features
+**Problem 4.1: Duplicate Detection is Too Permissive**
+```markdown
+# From runtime.md
 
-#### 2.1 Budget Tracking & Alerts
-```typescript
-// New user intents
-User: "set budget makanan 1jt per month"
-System: Budget saved. Currently: Rp200.000 / Rp1.000.000
+## Duplicate handling
 
-User: "status budget"
-System:
-  Groceries: Rp850.000 / Rp1.000.000 (85%)
-  Transport: Rp450.000 / Rp500.000 (90% ⚠️ ALERT)
-  Utilities: Rp200.000 / Rp350.000 (57%)
+Potential duplicate if all match:
+- same date,
+- same amount,
+- same merchant or description,
+- same source within a short time window.
+
+If likely duplicate, ask before saving:
+"Transaksi serupa sudah ada hari ini: Rp15.000 untuk Kopi. Tetap simpan lagi?"
 ```
 
-**Deliverable:**
-- Add budget schema to `references/schema.md`
-- Implement budget parsing in runtime
-- Alert system (email/chat notification)
-- `docs/BUDGET_SETUP.md`
+**Issue:** User says "yes" → duplicate still saved. No versioning to track corrections.
 
-#### 2.2 Recurring Transactions
-```typescript
-// New user intents
-User: "recurring bills listrik 350rb setiap 28"
-System: Scheduled. Next: Jun 28
+**Problem 4.2: OCR Confidence Not Clear**
+```markdown
+# From runtime.md
 
-User: "gajian 5jt setiap tanggal 1"
-System: Scheduled. Next: Jun 1
+## Receipt confidence rules
 
-// System auto-creates on scheduled date
+Ask for confirmation when:
+- no total is detected,
+- multiple possible totals conflict,
+- OCR text is unreadable,
+...
 ```
 
-**Deliverable:**
-- Cron job scheduler integration
-- Recurring transaction schema
-- `docs/RECURRING_TRANSACTIONS.md`
+**Issue:** Doesn't return OCR confidence score to user. Hard to debug when OCR fails.
 
-#### 2.3 Undo & Soft-Delete
-```typescript
-// New field in schema
-transactions:
-  - id: uuid
-  - amount: number
-  - deleted_at: null | timestamp
-  - version: number
-  - edited_history: []
-
-// New user intent
-User: "undo"
-System: Removed: Rp15.000 beli kopi (10 minutes ago)
-
-User: "show deleted transactions"
-System: [list of soft-deleted items]
-```
-
-**Deliverable:**
-- Update schema with soft-delete + versioning
-- New runtime handlers for undo/delete
-- Tests for data recovery
-
-#### 2.4 Enhanced OCR with Confidence
-```typescript
-// Improved OCR response
-User: [uploads receipt]
-System: Found:
-  Merchant: Indomaret (98% confidence)
-  Total: Rp87.500 (94% confidence)
-  Date: 2026-05-31 (100% confidence)
-
-  Save this? [Yes] [Edit] [Reject]
-```
-
-**Deliverable:**
-- Multi-provider OCR (Google Vision + Tesseract)
-- Confidence scoring
-- Smart validation (compare with patterns)
-- User correction learning
-
-#### 2.5 Data Export
-```typescript
-User: "export this month"
-System: [generates CSV/PDF/JSON]
-  - Download link
-  - Format: Income, Expense, Category breakdown
-```
-
-**Deliverable:**
-- Export module (CSV, PDF, JSON)
-- Query/filter system
-- `docs/EXPORT.md`
+**Problem 4.3: No Way to Undo or Correct**
+- Append-only writes mean corrections must be manual
+- User can't say "undo last transaction"
+- No soft-delete = no recovery from mistakes
+- Audit trail missing
 
 ---
 
-### Phase 3: Flexibility (v3.0 - 4 weeks)
+### 5. Setup.md Auth Guidance is Confusing
 
-**Goal:** Support multiple backends + improve architecture
+**From setup.md:**
+```markdown
+## Auth priority
 
-#### 3.1 Abstract Storage Layer
-```typescript
-// Create interface
-interface TransactionStore {
-  save(transaction: Transaction): Promise<void>
-  query(filter: QueryFilter): Promise<Transaction[]>
-  update(id: string, data: Partial<Transaction>): Promise<void>
-  delete(id: string, permanent: boolean): Promise<void>
+Preferred order:
+
+1. Existing Hermes Google Sheets tool auth
+2. Existing OAuth client flow
+3. Existing GOOGLE_SERVICE_ACCOUNT_JSON
+4. Only if none available, ask user to setup
+```
+
+**Problem:** 
+- What if multiple auth modes exist? Which wins?
+- How does agent check if each mode works?
+- Error messages don't match auth mode (user confused which to fix)
+
+**Real User Experience:**
+```
+User: "Help me setup"
+Agent: Checks auth → "Configuring Google Sheets..."
+Agent: Can't detect which mode user has
+Agent: Generic error: "Google auth not working"
+User: "How do I fix?"
+Agent: (Repeats same unhelpful message)
+User: (Gives up)
+```
+
+---
+
+### 6. Documentation Gaps
+
+**Missing from reference docs:**
+
+1. **No Setup Troubleshooting**
+   - "Auth failed: why?"
+   - "Sheet creation failed: why?"
+   - "Access denied: how to fix?"
+
+2. **No Feature Examples for New Intents**
+   - Budget tracking examples
+   - Recurring transaction examples
+   - Undo/correction workflow
+
+3. **No Hermes Integrations Docs**
+   - How to use with notification toolset (for alerts)?
+   - How to schedule recurring tasks?
+   - How to export to other toolsets?
+
+4. **No Troubleshooting Guide**
+   - "Why did my receipt read wrong?"
+   - "How do I know if my Sheet is set up correctly?"
+   - "What if Google Sheets is down?"
+
+---
+
+## ✅ Strategic Improvements (Hermes-Aligned)
+
+### Phase 1: Improve SKILL.md & Setup (v1.1 - 1 week)
+
+**Goal:** Make setup clearer and error recovery better
+
+#### 1.1 Enhance SKILL.md Onboarding Section
+
+**Current:**
+```markdown
+## Google auth priority
+
+Use existing Google authentication before asking the user to create anything new.
+
+Preferred order:
+
+1. Existing OAuth client flow...
+2. Existing Google Sheets tool authentication...
+3. Existing GOOGLE_SERVICE_ACCOUNT_JSON...
+4. Only if none available, ask user to setup...
+```
+
+**Improved:**
+```markdown
+## Setup Strategy (Automatic)
+
+**On first activation:**
+
+1. **Check Hermes runtime capabilities:**
+   - Can Hermes provide Google Sheets auth? YES → Use it
+   - Can Hermes create spreadsheets? YES → Create "Personal Finance Ledger"
+   - Is FINANCE_SHEET_ID configured? YES → Validate access
+
+2. **If Hermes auth insufficient, offer alternatives:**
+   - Option A: "Use existing OAuth credentials?" (if detected)
+   - Option B: "Use Google Service Account?" (manual setup)
+   - Option C: "Need help? Send me your auth type and I'll guide you."
+
+3. **Validate setup:**
+   - Can read/write Google Sheets? YES → Continue
+   - Can access configured sheet? YES → Continue
+   - Can find "Transactions" tab? If NO → Create it
+   - Required headers present? If NO → Create them
+
+4. **Success state:**
+   ✅ "Setup valid. I can save transactions. Try: 'beli kopi 15rb'"
+
+5. **On error:**
+   ❌ "Setup check failed at: [specific point]"
+   → Provide: Problem description + fix steps + support link
+```
+
+**Deliverables:**
+- Update `SKILL.md` with decision tree (what to check first)
+- Add "Setup Troubleshooting" mini-guide
+- Return specific error messages (e.g., "Sheet not accessible: check permissions")
+
+#### 1.2 Enhance setup.md with Troubleshooting
+
+**Add section:**
+```markdown
+## Setup Troubleshooting
+
+### Error: "No Google auth found"
+**Cause:** Hermes doesn't have Google Sheets integration configured
+**Fix:**
+1. Deployer: Ensure Hermes has google_sheets toolset enabled
+2. User: Contact your Hermes admin for Google auth setup
+
+### Error: "Sheet not accessible"
+**Cause:** Service account doesn't have editor access to sheet
+**Fix:**
+1. Copy service account email: `YOUR_PROJECT@appspot.gserviceaccount.com`
+2. Open your Google Sheet
+3. Share > Add people > Paste email > Grant "Editor" access
+
+### Error: "Transactions tab not found"
+**Cause:** Wrong sheet name configured
+**Fix:**
+1. Check: FINANCE_TRANSACTIONS_SHEET_NAME env var
+2. Or: Skill can auto-create "Transactions" tab? Ask deployer
+
+### Error: "Column headers missing"
+**Cause:** Sheet doesn't have required columns
+**Fix:**
+1. Skill should auto-add headers from schema.md on first write
+2. If manual: See references/schema.md for required columns
+```
+
+**Deliverables:**
+- `skills/personal-finance-ledger/references/TROUBLESHOOTING.md`
+- Link from SKILL.md to troubleshooting guide
+
+---
+
+### Phase 2: Enhance Runtime Logic & Error Handling (v1.2 - 1 week)
+
+**Goal:** Better intent detection, error recovery, better feedback
+
+#### 2.1 Improve Intent Detection in runtime.md
+
+**Add decision tree:**
+```markdown
+## Intent Detection Logic
+
+### Step 1: Check message type
+- Contains image/attachment? → Try `record_receipt_expense`
+- Contains numbers? → Try `record_expense` or `record_income`
+- Asks question? → Try `show_*_summary`
+- Asks to change data? → Try `update_transaction` or `delete_transaction`
+
+### Step 2: Disambiguate (if needed)
+
+#### Money mention + action verb
+
+- Action: "beli", "bayar", "beli", "habis" → `record_expense`
+- Action: "dapat", "gajian", "terima", "bonus" → `record_income`
+- Action: "koreksii", "ubah", "update" → `update_transaction`
+- Action: "hapus", "delete", "remove" → `delete_transaction` (with confirmation)
+- Action: "undo", "batalkan", "reset" → Ask user: delete or soft-revert?
+
+#### Query patterns
+
+- "berapa", "total", "summary" → `show_balance_summary` (default) or specific category
+- "kategori", "by category" → `show_category_summary`
+- "list", "show", "daftar" → `show_transactions`
+
+### Step 3: Require confirmation for risky intents
+
+- `delete_transaction` → Always confirm
+- Duplicate detected → Always confirm
+- Low-confidence OCR → Always confirm
+- Amount not found → Always ask
+
+### Step 4: Fallback
+
+If intent unclear:
+- Return: "Maaf, saya kurang mengerti. Bisa rinci lagi?"
+- Show: "Contoh: 'beli kopi 15rb' atau 'ringkasan bulan ini'"
+- Never silently fail
+```
+
+**Deliverables:**
+- Rewrite `runtime.md` with intent decision tree
+- Add "Fallback" section for unclear intents
+- Add confidence thresholds
+
+#### 2.2 Improve Error Messages
+
+**Before:**
+```
+"Transaksi gagal disimpan ke Google Sheets."
+```
+
+**After:**
+```
+"Transaksi 'beli kopi' (Rp15.000) failed karena:
+ - Problem: Google Sheets access denied
+ - Debug: Check service account has editor access
+ - Next: Retry or setup with OAuth instead?"
+```
+
+**Deliverables:**
+- Add error message templates to runtime.md
+- Include: [What went wrong] + [Why] + [How to fix]
+
+#### 2.3 Add Correction/Undo Support to Schema
+
+**From references/schema.md, add:**
+```markdown
+## Transaction Fields (Enhanced)
+
+### New fields for error recovery
+
+- `transaction_id` (uuid) — Unique ID for tracking
+- `version` (number) — Track edits (1, 2, 3...)
+- `deleted_at` (timestamp | null) — Soft delete timestamp
+- `correction_of` (uuid | null) — Links to replaced transaction
+- `edit_history` (array) — Log of corrections made
+- `confidence_score` (0-100) — How confident was the parsing?
+
+### Example (soft-delete + versioning)
+
+```json
+{
+  "transaction_id": "uuid-123",
+  "version": 1,
+  "date": "2026-05-31",
+  "amount": 15000,
+  "category": "Makanan & Minuman",
+  "deleted_at": null,
+  "correction_of": null,
+  "edit_history": []
 }
-
-// Implementations
-- GoogleSheetStore (existing)
-- NotionStore (new)
-- AirtableStore (new)
-- SQLiteStore (new)
-- PostgreSQLStore (new)
 ```
 
-**Deliverable:**
-- `src/storage/` module with interface
-- Implement 3 new backends (Notion, Airtable, SQLite)
-- Update SKILL.md config for backend selection
-- Migration guides
-
-#### 3.2 Self-Hosted Docker Option
-```dockerfile
-FROM node:20
-WORKDIR /app
-COPY . .
-RUN npm install
-EXPOSE 3000
-
-# Pre-configured with SQLite
-CMD ["npm", "start"]
+When user corrects:
+```json
+{
+  "transaction_id": "uuid-124",
+  "version": 1,
+  "date": "2026-05-31",
+  "amount": 17000,
+  "category": "Makanan & Minuman",
+  "correction_of": "uuid-123",  // Points to old version
+  "deleted_at": null,
+  "edit_history": [
+    {
+      "timestamp": "2026-05-31T10:05:00Z",
+      "changed_from": {"amount": 15000},
+      "changed_to": {"amount": 17000},
+      "reason": "user correction"
+    }
+  ]
+}
 ```
 
-**Deliverable:**
-- `Dockerfile`
-- `docker-compose.yml`
-- `docs/DOCKER_SETUP.md`
-
-#### 3.3 Multi-Currency Support
-```typescript
-User: "beli kopi $5 di Singapore"
-System: Convert to IDR?
-  - Auto-detect exchange rate
-  - Save both: SGD 5 + IDR 60.000
-
-User: "show balance in USD"
-System: Rp4.250.000 = USD ~280
+When user undoes:
+```json
+{
+  "transaction_id": "uuid-123",
+  "version": 1,
+  "date": "2026-05-31",
+  "amount": 15000,
+  "deleted_at": "2026-05-31T10:06:00Z",  // Soft deleted
+}
+```
 ```
 
-**Deliverable:**
-- Exchange rate API integration
-- Multi-currency schema
-- Conversion logic
+**Deliverables:**
+- Update `references/schema.md` with new fields
+- New runtime handlers for `update_transaction` and soft-delete
+- Document how Sheets stores this (extra columns or JSON?)
 
 ---
 
-### Phase 4: Competitive Features (v4.0 - Future)
+### Phase 3: Add Missing Intents (v2.0 - 3 weeks)
 
-#### 4.1 Bank Sync (Optional Plaid Integration)
+**Goal:** Support budget tracking, recurring transactions, and exports
+
+#### 3.1 Budget Tracking Intent
+
+**Add to runtime.md:**
+```markdown
+## New Intent: `set_budget`
+
+### Recognition patterns
+- "set budget makanan 1jt"
+- "budget groceries 500rb per month"
+- "buatkan budget transport 100rb"
+
+### Parsing
+- Extract: category, amount, frequency (daily/weekly/monthly/yearly)
+- Default frequency: monthly
+
+### Behavior
+1. Store budget rule in Google Sheets (new "Budgets" tab)
+2. Calculate current spending vs budget
+3. Return: "Budget set: Makanan & Minuman Rp1.000.000/bulan. Saat ini: Rp200.000 (20%)"
+
+## New Intent: `check_budget_status`
+
+### Recognition patterns
+- "berapa budget saya"
+- "status budget"
+- "budget overview"
+
+### Behavior
+1. Read budgets from Sheets
+2. Read transactions this period
+3. Calculate percentage used
+4. Highlight: Any > 80%? Return warning
+
+### Example response
 ```
-User: "connect my bank"
-System: [OAuth to Plaid]
-  - Auto-import transactions
-  - Reconcile with records
+Budget Status (Bulan Mei):
+  Makanan & Minuman: Rp850.000 / Rp1.000.000 (85% ⚠️)
+  Transportasi: Rp450.000 / Rp500.000 (90% 🔴)
+  Belanja: Rp200.000 / Rp800.000 (25% ✅)
 ```
 
-#### 4.2 Family Sharing
-```
-User: "share with partner@email.com"
-System: [Send invite]
-  - View shared transactions
-  - Merge reports
+## New Intent: `alert_on_budget_exceed`
+
+### Recognition patterns
+- "notify me if makanan exceed 1jt"
+- "alert jika transport > 500rb"
+
+### Behavior
+1. Store alert rule
+2. On next transaction: Check if budget exceeded
+3. If yes: Send alert via Hermes notification toolset (if available)
+4. Or: Return warning in next summary query
 ```
 
-#### 4.3 Tax Categorization
-```
-User: "show tax-deductible expenses"
-System: [Filter by tax categories]
-  - Generate tax report
+**Deliverables:**
+- Add budget schema to `references/schema.md`
+- Implement 3 new intents in `runtime.md`
+- Note: Requires Hermes budget/alerts toolset or Google Sheets formulas
+
+#### 3.2 Recurring Transaction Intent
+
+**Add to runtime.md:**
+```markdown
+## New Intent: `set_recurring_transaction`
+
+### Recognition patterns
+- "gajian setiap 28 5jt"
+- "recurring bills listrik 350rb setiap bulan"
+- "biaya gym 150rb mingguan"
+
+### Parsing
+- Extract: type (income/expense), amount, frequency, day/date
+- Calculate: Next occurrence date
+
+### Behavior
+1. Store recurring rule in Sheets (new "Recurring" tab)
+2. Create initial transaction for next occurrence
+3. Return: "Recurring gajian set. Next: 2026-06-28 (Rp5.000.000)"
+
+### Note: Requires Scheduler
+This intent requires Hermes scheduler toolset to auto-create transactions on schedule.
+If not available: Just store the rule, user must manually trigger.
+
+## New Intent: `list_recurring_transactions`
+
+### Behavior
+- Show all active recurring transactions
+- Show next occurrence date
+- Format: "Gajian: Rp5.000.000 every 28th (next: Jun 28)"
 ```
 
-#### 4.4 Community Templates
+**Deliverables:**
+- Add recurring schema to `references/schema.md`
+- Add 2 intents to `runtime.md`
+- Note: "Requires Hermes scheduler or external cron service"
+
+#### 3.3 Export Intent
+
+**Add to runtime.md:**
+```markdown
+## New Intent: `export_transactions`
+
+### Recognition patterns
+- "export data bulan ini"
+- "export May 2026"
+- "download transactions"
+
+### Supported formats
+- CSV (default)
+- JSON
+- PDF (if toolset available)
+
+### Behavior
+1. Query transactions from Sheets (with date filter)
+2. Format as requested
+3. Return: "Exported 45 transactions. See: [CSV/JSON/PDF link]"
+
+### Note: Depends on toolset
+- File generation/download requires Hermes file toolset
+- If not available: Return data as formatted text
 ```
-- Pre-built budgets (student, freelancer, family)
-- Category systems by country
-- Shared settings
-```
+
+**Deliverables:**
+- Add export intent to `runtime.md`
+- Create export handler (CSV builder, JSON serializer)
+- Document: "Requires file_output toolset"
 
 ---
 
-## 📋 Implementation Priority Matrix
+### Phase 4: Improve Documentation (v2.0 - 1 week)
 
-| Feature | Effort | Impact | Priority |
-|---------|--------|--------|----------|
-| Setup wizard | 2 days | High | P0 |
-| User docs | 3 days | High | P0 |
-| Budget tracking | 5 days | High | P1 |
-| Undo/soft-delete | 3 days | Medium | P1 |
-| Recurring transactions | 4 days | High | P1 |
-| Storage abstraction | 6 days | High | P2 |
-| Notion backend | 4 days | Medium | P2 |
-| OCR improvements | 3 days | Medium | P2 |
-| Export feature | 2 days | Low | P3 |
-| Docker setup | 2 days | Medium | P3 |
+**Goal:** Make skill easier to deploy and troubleshoot
+
+#### 4.1 Create Comprehensive User & Developer Guides
+
+```
+skills/personal-finance-ledger/
+├── SKILL.md (enhanced with better setup guidance)
+├── README.md (update with examples)
+├── docs/
+│   ├── DEPLOYER_GUIDE.md
+│   │   - How to deploy skill to Hermes runtime
+│   │   - Auth modes explained
+│   │   - Toolset requirements
+│   │   - Environment variable reference
+│   │
+│   ├── USER_GUIDE.md
+│   │   - For end-users of the skill
+│   │   - Conversational examples
+│   │   - Workflow scenarios
+│   │   - Budget setup guide
+│   │   - Recurring transactions guide
+│   │
+│   └── CONTRIBUTING.md
+│       - How to add new intents
+│       - How to modify schema
+│       - Testing guidelines
+│
+└── references/
+    ├── schema.md (enhanced with new fields)
+    ├── runtime.md (rewritten with intent tree)
+    ├── setup.md (added troubleshooting)
+    ├── examples.md (expanded with budget/recurring examples)
+    └── TROUBLESHOOTING.md (NEW)
+        - Auth errors
+        - Sheet errors
+        - Intent not recognized
+        - OCR failures
+```
+
+**Deliverables:**
+- `docs/DEPLOYER_GUIDE.md` (500 words)
+- `docs/USER_GUIDE.md` (800 words)
+- `docs/TROUBLESHOOTING.md` (400 words)
+- Update `README.md` with feature list
+
+#### 4.2 Add Examples for New Features
+
+**Expand references/examples.md:**
+```markdown
+## Budget Tracking
+
+User: "set budget makanan 1jt"
+Assistant: "Budget set: Makanan & Minuman Rp1.000.000/bulan. Saat ini: Rp200.000 (20%)"
+
+User: "budget status"
+Assistant:
+Makanan & Minuman: Rp850.000 / Rp1.000.000 (85%)
+Transportasi: Rp450.000 / Rp500.000 (90% ⚠️)
+
+## Recurring Transactions
+
+User: "gajian setiap 28 5jt"
+Assistant: "Recurring income set. Next: 2026-06-28 (Rp5.000.000)"
+
+## Undo/Correction
+
+User: "beli kopi 15rb"
+Assistant: "Tercatat: pengeluaran Rp15.000 untuk Makanan & Minuman."
+
+User: (10 minutes later) "undo"
+Assistant: "Undo: Removed Rp15.000 (beli kopi). Confirm? [Yes] [No]"
+
+## Export
+
+User: "export bulan ini"
+Assistant: "Exported 45 transactions (May 2026). Download: [CSV]"
+```
+
+**Deliverables:**
+- Expand `examples.md` with 20+ new scenarios
+- Include error cases (e.g., "OCR confidence low")
+- Document edge cases
+
+---
+
+## 📋 Implementation Priority & Effort
+
+| Phase | Feature | Effort | Impact | Dependency |
+|-------|---------|--------|--------|-----------|
+| 1.1 | SKILL.md onboarding rewrite | 2 days | **High** | None |
+| 1.1 | Setup troubleshooting guide | 2 days | High | None |
+| 1.2 | Intent detection tree (runtime.md) | 3 days | **High** | None |
+| 1.2 | Error message templates | 2 days | Medium | 1.2 |
+| 1.2 | Schema enhancement (soft-delete) | 3 days | Medium | None |
+| 2.0 | Budget tracking (3 intents) | 5 days | **High** | Schema |
+| 2.0 | Recurring transactions (2 intents) | 4 days | **High** | Schema |
+| 2.0 | Export intent | 3 days | Medium | None |
+| 2.0 | Documentation (guides + examples) | 5 days | **High** | All above |
+
+**Recommended execution:**
+- **Week 1:** Phase 1.1 + 1.2 (Setup improvements)
+- **Week 2-3:** Phase 2.0 (Budget + recurring)
+- **Week 4:** Phase 2.0 continued + Documentation
 
 ---
 
 ## 🎯 Success Metrics
 
-### Phase 1 (Setup)
-- [ ] Setup wizard < 5 minutes for beginners
-- [ ] 90% fewer support questions
-- [ ] 0 abandoned users due to setup error
+### v1.1 (Setup Improvements)
+- [ ] Setup errors drop 70%
+- [ ] Setup time < 10 minutes
+- [ ] Troubleshooting guide answers 90% of common questions
+- [ ] Zero abandoned users due to setup
 
-### Phase 2 (Features)
-- [ ] Budget tracking used by 50%+ of users
-- [ ] Recurring transactions reduce data entry by 40%
-- [ ] Undo feature used 3+ times per user/month
+### v2.0 (New Features)
+- [ ] Budget intent recognized 95% of time
+- [ ] Recurring transactions reduce manual entry 50%
+- [ ] Soft-delete used in 40% of sessions
+- [ ] Export feature used weekly
 
-### Phase 3 (Flexibility)
-- [ ] Support 3+ storage backends
-- [ ] Self-hosted Docker deployments 25%+
-- [ ] Community contributions 5+
-
-### Phase 4 (Competitive)
-- [ ] 500+ GitHub stars
-- [ ] 100+ open-source contributors
-- [ ] Compared favorably with YNAB in search results
+### Overall
+- [ ] Community stars: 5+ (from 1)
+- [ ] GitHub issues: Community contributions
+- [ ] Hermes skill registry: Featured recommendation
 
 ---
 
-## 📞 Next Steps
+## 📝 Implementation Checklist
 
-### Immediate (This Week)
-1. [ ] Review this document
-2. [ ] Prioritize Phase 1 tasks
-3. [ ] Create GitHub issues for each task
-4. [ ] Assign owners
+### Phase 1.1: Setup & Documentation (Week 1)
+- [ ] Rewrite `SKILL.md` onboarding section
+- [ ] Create `references/TROUBLESHOOTING.md`
+- [ ] Add auth decision flowchart to setup.md
+- [ ] Test: Each auth mode works end-to-end
+- [ ] Test: First-time user doesn't get stuck
 
-### Short-term (Next 2 Weeks)
-1. [ ] Implement setup wizard
-2. [ ] Write user documentation
-3. [ ] User testing & feedback
+### Phase 1.2: Intent & Error Handling (Week 1-2)
+- [ ] Rewrite `runtime.md` with intent tree
+- [ ] Add error message templates
+- [ ] Update `references/schema.md` with new fields
+- [ ] Implement soft-delete logic in runtime
+- [ ] Test: Duplicate detection + correction flow
+- [ ] Test: Error messages are actionable
 
-### Medium-term (Next Month)
-1. [ ] Release v1.0 with improvements
-2. [ ] Community announcement
-3. [ ] Start Phase 2 development
+### Phase 2: New Features (Week 2-3)
+- [ ] Implement budget tracking intents
+- [ ] Implement recurring transaction intents
+- [ ] Implement export intent
+- [ ] Add examples to `examples.md`
+- [ ] Update README with new features
+- [ ] Create `docs/USER_GUIDE.md`
+- [ ] Create `docs/DEPLOYER_GUIDE.md`
+- [ ] Test: All new intents work end-to-end
+- [ ] Test: Google Sheets stores new data correctly
 
----
-
-## 📝 Appendix: Detailed Feature Specs
-
-### A. Setup Wizard Flow
-
-```
-Step 1: Welcome
-  "Welcome to Mind-your-skill! Let's set you up."
-  → Continue?
-
-Step 2: Google Auth
-  ? How do you want to authenticate?
-  1. Let me create OAuth credentials
-  2. I have a service account JSON
-  3. Use my existing Google Sheets access
-  → Select 1-3
-
-Step 3: Spreadsheet
-  ? Use existing or create new?
-  1. Create new "Personal Finance Ledger"
-  2. Use my existing Sheet
-  → Select 1-2
-  [If 2] → Paste Sheet URL:
-
-Step 4: Settings
-  ? Currency: IDR (or other)
-  ? Timezone: Asia/Jakarta (or other)
-  ? First transaction:
-
-Step 5: Success
-  ✅ All set! Try: "beli kopi 15rb"
-```
-
-**Output:** `.env` file or stored config
-
-### B. User Documentation Structure
-
-```
-docs/
-├── QUICK_START.md
-│   - 5-minute setup
-│   - First 3 transactions
-│   - Done!
-│
-├── USER_GUIDE.md
-│   - Basic transactions
-│   - Receipt scanning
-│   - Budgets
-│   - Reports
-│   - Troubleshooting
-│
-├── FAQ.md
-│   - 20+ common questions
-│   - Screenshots
-│   - Video links
-│
-├── API.md (for developers)
-│   - Skill YAML schema
-│   - Runtime handlers
-│   - Storage interface
-│
-└── EXAMPLES.md
-    - 50+ real scenarios
-    - Before/after
-```
-
-### C. Feature Request Template
-
-```markdown
-# Feature Request: [Title]
-
-## Problem
-[Describe current limitation]
-
-## Proposed Solution
-[How should it work?]
-
-## Examples
-[Real user scenarios]
-
-## Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-```
+### Phase 3: Community (Week 4+)
+- [ ] Announce improvements in README
+- [ ] Submit to Hermes skill registry
+- [ ] Create GitHub discussion for feedback
+- [ ] Monitor: User questions, common errors
+- [ ] Iterate based on feedback
 
 ---
 
-## 🙏 Acknowledgments
+## 🔗 Hermes Integration Notes
 
-This recommendations document is prepared to help Mind-your-skill reach its full potential as a community-driven personal finance tool. Success requires collaboration, user feedback, and iterative improvement.
+### Toolsets This Skill Uses/Could Use
+```yaml
+# Currently used
+requires_toolsets:
+  - google_sheets    # For reading/writing transactions
 
-**Let's build something useful together!** 🚀
+optional_toolsets:
+  - ocr              # For receipt reading
+  - file_input       # For receipt image upload
+
+# Could enhance with
+future_toolsets:
+  - scheduler        # For recurring transaction automation
+  - notifications    # For budget alerts
+  - file_output      # For export generation
+  - data_analysis    # For advanced reports
+```
+
+### Recommended Hermes Integration Approach
+1. **Setup time:** Use Hermes runtime to detect available toolsets
+2. **Features:** Gracefully degrade if optional toolsets missing
+3. **Auth:** Let Hermes runtime manage Google credentials
+4. **Scheduling:** Defer to Hermes scheduler for recurring tasks
+5. **Alerts:** Use Hermes notification system (if available)
 
 ---
 
-**Document Version:** 1.0  
+## 🙏 Notes for Developers
+
+### For Skill Maintainers
+- These recommendations preserve the conversational UX
+- No fundamental architecture changes needed
+- Improvements are additive (backward compatible)
+- Focus: Better SKILL.md, clearer runtime.md, stronger schema.md
+
+### For Hermes Runtime Deployers
+- Budget/recurring features need scheduler support (or cron alternative)
+- Alert system depends on notifications toolset availability
+- Graceful degradation recommended for optional features
+- Test all auth modes in your Hermes environment
+
+### For End Users
+- Improvements are transparent (better conversational experience)
+- New features automatically available once deployed
+- Setup experience will be significantly easier
+- More confident error messages = faster troubleshooting
+
+---
+
+**Document Version:** 2.0 (Hermes-Aligned)  
 **Last Updated:** 2026-05-31  
 **Prepared By:** GitHub Copilot Analysis  
-**Status:** Ready for Implementation Planning
+**Architecture Focus:** Hermes Agent Skill Development  
+**Status:** Ready for Collaborative Implementation
