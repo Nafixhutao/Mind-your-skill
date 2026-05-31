@@ -1,7 +1,7 @@
 ---
 name: personal-finance-ledger
 description: Track personal income and expenses from free text or receipt images, then save them to Google Sheets.
-version: 1.0.0
+version: 1.0.1
 metadata:
   hermes:
     tags:
@@ -21,7 +21,9 @@ metadata:
       - FINANCE_TRANSACTIONS_SHEET_NAME
       - FINANCE_DEFAULT_CURRENCY
       - FINANCE_DEFAULT_TIMEZONE
-    required_environment_variables:
+      - GOOGLE_CLIENT_SECRET_FILE
+      - GOOGLE_OAUTH_TOKEN_FILE
+    optional_environment_variables:
       - GOOGLE_SERVICE_ACCOUNT_JSON
 ---
 
@@ -41,7 +43,20 @@ Use this skill when the user wants to record, inspect, or summarize personal inc
 - The user asks for investment, tax, legal, or financial advice beyond basic record keeping.
 - The user wants business accounting, invoicing, payroll, or tax filing.
 - The user asks to delete or overwrite financial data without explicit confirmation.
-- Required Google Sheets configuration is missing.
+- No usable Google Sheets authentication is available.
+
+## Google auth priority
+
+Use existing Google authentication before asking the user to create anything new.
+
+Preferred order:
+
+1. Existing OAuth client flow, such as `google_client_secret.json` plus a valid OAuth token.
+2. Existing Google Sheets tool authentication provided by the Hermes runtime.
+3. Existing `GOOGLE_SERVICE_ACCOUNT_JSON` service account credential.
+4. Only if none are available, ask the user to set up Google authentication.
+
+Do not ask for a service account if OAuth credentials already exist and can access Google Sheets.
 
 ## Reference routing
 
@@ -58,7 +73,7 @@ Read only what is needed:
 - Confirm saved transactions with amount, type, category, and date.
 - Ask follow-up questions only when required data is missing or confidence is low.
 - Prefer append-only writes.
-- Never expose credentials, tokens, or raw service account JSON.
+- Never expose credentials, OAuth tokens, client secrets, or service account JSON.
 
 ## Security limits
 
