@@ -1,26 +1,31 @@
 ---
 name: moneyclip
-description: Personal expense tracking skill for Hermes Agent. Uses Google Sheets API helper scripts to create and manage a MoneyClip spreadsheet after one-time Google authorization.
-version: 4.7.0
+description: Personal expense tracking skill for Hermes Agent. Uses a MoneyClip Google Sheet template with Apps Script Web App endpoint for easy setup, then tracks balance and spending from chat messages.
+version: 4.8.0
 metadata:
   hermes:
     tags: [finance, expense-tracker, telegram, google-sheets, indonesia]
     category: productivity
     mode: auto
     trigger: telegram.message
-    requires_toolsets: [terminal]
+    requires_toolsets: [http]
+    optional_toolsets: [terminal]
     config:
+      - key: moneyclip.sheet_url
+        description: Google Apps Script Web App endpoint from the copied MoneyClip template.
+        default: ""
+        required: false
+      - key: moneyclip.template_url
+        description: Optional MoneyClip Google Sheet template copy URL.
+        default: ""
+        required: false
       - key: moneyclip.spreadsheet_id
-        description: Google Spreadsheet ID created or used by MoneyClip.
+        description: Optional Google Spreadsheet ID for advanced Google API helper mode.
         default: ""
         required: false
       - key: moneyclip.spreadsheet_url
-        description: Google Spreadsheet URL created or used by MoneyClip.
+        description: Optional Google Spreadsheet URL for advanced Google API helper mode.
         default: ""
-        required: false
-      - key: moneyclip.token_path
-        description: Local Google OAuth token path used by MoneyClip helper scripts.
-        default: ~/.moneyclip/token.json
         required: false
       - key: moneyclip.timezone
         description: User timezone.
@@ -42,24 +47,36 @@ Use this entrypoint only:
 
 MoneyClip has two phases:
 
-1. **Setup phase** — authorize Google once, create a Google Sheet automatically, prepare tabs, and mark setup as complete.
-2. **Runtime phase** — parse balance/spending messages, update the configured spreadsheet through helper scripts, and reply with the remaining balance.
+1. **Setup phase** — guide the user to copy the MoneyClip Google Sheet template, deploy the included Apps Script as a Web App, and save the Web App URL.
+2. **Runtime phase** — parse balance/spending messages, send actions to the configured Web App endpoint, and reply with the remaining balance.
 
-## Tool preference
+## Primary setup path
 
-For Google Sheets operations, use the local helper scripts in `scripts/` when terminal execution is available:
+Use the template Apps Script path first. This is the easiest path for normal users because it does not require Google Cloud OAuth client files, Python, terminal, n8n, or manual tab creation.
 
-- `scripts/google_auth.py` — authorizes Google Sheets API access and stores a local token.
-- `scripts/create_sheet.py` — creates a MoneyClip spreadsheet with required tabs and headers.
-- `scripts/moneyclip_sheets.py` — performs runtime actions such as set balance, add expense, get balance, and recap.
+Primary storage config:
 
-Do not rely on browser-based Google Sheets editing as the primary path.
+`moneyclip.sheet_url`
+
+This should be a Google Apps Script Web App URL ending in `/exec`.
+
+## Advanced setup path
+
+If the user explicitly wants local Google Sheets API mode and terminal execution is available, the helper scripts in `scripts/` may be used:
+
+- `scripts/google_auth.py`
+- `scripts/create_sheet.py`
+- `scripts/moneyclip_sheets.py`
+
+Do not use advanced Google API helper mode unless the user chooses it.
 
 ## Linked references
 
 Load only the reference file needed for the current task:
 
-- `references/setup.md` — Google authorization and automatic spreadsheet setup.
+- `references/setup.md` — setup router and recommended path.
+- `references/template-setup.md` — easiest template Apps Script setup.
+- `references/apps-script.md` — Apps Script Web App code/reference.
 - `references/sheets-schema.md` — required Google Sheet tabs and headers.
 - `references/runtime.md` — daily expense tracking after setup.
 - `references/examples.md` — examples and user guidance.
@@ -69,9 +86,10 @@ Load only the reference file needed for the current task:
 Use only the smallest relevant instruction file.
 
 - If `moneyclip.setup_complete` is not `true`, load `references/setup.md`.
-- If Google authorization is missing, run `scripts/google_auth.py` and ask the user to complete the authorization link.
-- If no `moneyclip.spreadsheet_id` exists after authorization, run `scripts/create_sheet.py` and save the returned `spreadsheet_id` and `spreadsheet_url`.
+- If setup is incomplete and the user is normal/non-technical, load `references/template-setup.md`.
+- If the user sends a Google Apps Script Web App URL, test and save it as `moneyclip.sheet_url`.
 - If setup is complete and the user sends balance/spending/recap/edit/delete messages, load `references/runtime.md`.
+- If the user asks for Apps Script code or template internals, load `references/apps-script.md`.
 - If the user asks what the skill can do, load `references/examples.md`.
 - Do not read setup instructions during normal daily expense tracking unless setup is incomplete.
 
@@ -93,5 +111,5 @@ Do not use this skill for unrelated personal finance advice, investments, loans,
 - Be brief.
 - During runtime, reply in at most two lines.
 - Always show remaining balance after a recorded transaction.
-- Ask one clear question when setup, Google authorization, or nominal amount is missing.
-- Never ask the user to paste Google OAuth secrets into chat. Credential files must stay local.
+- Ask one clear question when setup, endpoint URL, or nominal amount is missing.
+- Never ask for Google account passwords or private OAuth credentials.
