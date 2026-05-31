@@ -1,7 +1,7 @@
 ---
 name: personal-finance-ledger
 description: Track personal income and expenses from free text or receipt images, then save them to Google Sheets.
-version: 1.0.1
+version: 1.0.2
 metadata:
   hermes:
     tags:
@@ -57,6 +57,20 @@ Preferred order:
 4. Only if none are available, ask the user to set up Google authentication.
 
 Do not ask for a service account if OAuth credentials already exist and can access Google Sheets.
+
+## Spreadsheet setup priority
+
+If Google auth works but `FINANCE_SHEET_ID` is missing, do not immediately ask the user for a Sheet ID.
+
+Preferred order:
+
+1. If the user provided a Google Sheet URL or ID, use it.
+2. If no Sheet is provided and the runtime can create Google Sheets, offer to create a new spreadsheet named `Personal Finance Ledger`.
+3. If the user already said to create it, create it without asking again.
+4. Create or validate the `Transactions` tab and required headers from `references/schema.md`.
+5. Save or report the new `FINANCE_SHEET_ID` for future runs.
+
+Only ask the user for an existing Sheet ID if the runtime cannot create a spreadsheet.
 
 ## Reference routing
 
