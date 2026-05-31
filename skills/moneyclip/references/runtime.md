@@ -11,10 +11,24 @@ Flow:
 1. Detect intent.
 2. Parse amount.
 3. Infer category.
-4. Store the action.
-5. Reply with the remaining balance.
+4. Send the action to `moneyclip.sheet_url`.
+5. Reply with the remaining balance from the endpoint response.
 
 During runtime, reply in at most two lines.
+
+## Storage
+
+Primary runtime storage uses the configured Apps Script Web App endpoint:
+
+```text
+moneyclip.sheet_url
+```
+
+Send JSON payloads to that endpoint by HTTP POST.
+
+Do not use browser-based Google Sheets editing during runtime.
+
+If `moneyclip.sheet_url` is missing, setup is incomplete.
 
 ## Active intents
 
@@ -28,7 +42,15 @@ Examples:
 - `ada uang 1jt`
 - `cash 300rb`
 
-Action: `set_balance`.
+Action payload:
+
+```json
+{
+  "action": "set_balance",
+  "chat_id": "<chat_id>",
+  "amount": 200000
+}
+```
 
 Reply:
 
@@ -48,7 +70,22 @@ Examples:
 - `parkir 5000`
 - `kemarin beli obat 30rb`
 
-Action: `add`.
+Action payload:
+
+```json
+{
+  "action": "add",
+  "chat_id": "<chat_id>",
+  "message_id": "<message_id>",
+  "entries": [
+    {
+      "desc": "makan",
+      "amount": 25000,
+      "category": "Makanan & Minuman"
+    }
+  ]
+}
+```
 
 Reply:
 
@@ -66,7 +103,14 @@ Examples:
 - `cek saldo`
 - `uangku berapa`
 
-Action: `get_balance`.
+Action payload:
+
+```json
+{
+  "action": "get_balance",
+  "chat_id": "<chat_id>"
+}
+```
 
 Reply:
 
@@ -84,7 +128,15 @@ Examples:
 - `rekap minggu ini`
 - `rekap bulan ini`
 
-Action: `recap` with period `today`, `week`, or `month`.
+Action payload:
+
+```json
+{
+  "action": "recap",
+  "chat_id": "<chat_id>",
+  "period": "today"
+}
+```
 
 Reply:
 
@@ -107,7 +159,11 @@ Delete examples:
 - `hapus transaksi terakhir`
 - `batal catat makan`
 
-Use the last entry from state if no entry ID is provided.
+If the configured Apps Script endpoint does not support edit/delete yet, reply:
+
+```text
+Edit/hapus belum aktif di endpoint ini.
+```
 
 ## Do not record
 
@@ -159,6 +215,8 @@ Default date is today in `moneyclip.timezone`.
 
 Action date format: `YYYY-MM-DD`.
 
+When sending backdated expenses, include `date` inside each entry.
+
 ## Categories
 
 - Makanan & Minuman: makan, nasi, kopi, minum, jajan, snack
@@ -188,20 +246,12 @@ Duplicate: if the message is the same or very similar to the previous transactio
 Lanjutan tadi atau transaksi baru?
 ```
 
-## Storage
-
-If `moneyclip.sheet_url` exists, send the matching action payload by HTTP POST.
-
-If direct Google Sheet editing is available, write directly to the tabs defined in `references/sheets-schema.md`.
-
-Never hardcode secrets. Use configured values only.
-
 ## Errors
 
 If setup is incomplete:
 
 ```text
-Kirim link Google Sheet untuk MoneyClip ya. Pastikan aksesnya Editor.
+MoneyClip belum tersambung. Kirim Web App URL Apps Script dulu ya.
 ```
 
 If balance is missing:
@@ -210,10 +260,16 @@ If balance is missing:
 Pegang uang berapa hari ini?
 ```
 
-If endpoint or token is invalid:
+If endpoint returns `BALANCE_MISSING`:
 
 ```text
-Akses MoneyClip belum valid.
+Pegang uang berapa hari ini?
+```
+
+If endpoint is invalid:
+
+```text
+Endpoint MoneyClip belum valid. Kirim Web App URL yang berakhiran /exec.
 ```
 
 If storage times out, retry once. If it still fails:
