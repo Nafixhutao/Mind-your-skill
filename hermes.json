@@ -1,0 +1,27 @@
+{
+  "name": "mind-your-skill",
+  "description": "Open-source Hermes Agent skill library.",
+  "version": "0.1.0",
+  "repository": "https://github.com/Nafixhutao/Mind-your-skill",
+  "registry": "registry.json",
+  "raw_registry": "https://raw.githubusercontent.com/Nafixhutao/Mind-your-skill/main/registry.json",
+  "root_entrypoint": "SKILL.md",
+  "raw_root_entrypoint": "https://raw.githubusercontent.com/Nafixhutao/Mind-your-skill/main/SKILL.md",
+  "skills": [
+    {
+      "name": "personal-finance-ledger",
+      "description": "Track personal income and expenses from free text or receipt images and save records to Google Sheets.",
+      "version": "1.0.0",
+      "entrypoint": "skills/personal-finance-ledger/SKILL.md",
+      "raw_entrypoint": "https://raw.githubusercontent.com/Nafixhutao/Mind-your-skill/main/skills/personal-finance-ledger/SKILL.md",
+      "documentation": "skills/personal-finance-ledger/README.md",
+      "requires": [
+        "GOOGLE_SERVICE_ACCOUNT_JSON",
+        "FINANCE_SHEET_ID"
+      ],
+      "optional": [
+        "OCR/file input for receipt images"
+      ]
+    }
+  ]
+}
