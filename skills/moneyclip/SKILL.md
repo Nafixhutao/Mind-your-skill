@@ -1,30 +1,26 @@
 ---
 name: moneyclip
-description: Personal expense tracking skill for Hermes Agent. Guides first-run Google Sheet setup, then tracks balance and spending from Telegram messages.
-version: 4.6.0
+description: Personal expense tracking skill for Hermes Agent. Uses Google Sheets API helper scripts to create and manage a MoneyClip spreadsheet after one-time Google authorization.
+version: 4.7.0
 metadata:
   hermes:
     tags: [finance, expense-tracker, telegram, google-sheets, indonesia]
     category: productivity
     mode: auto
     trigger: telegram.message
-    requires_toolsets: [http, browser]
-    preferred_dependencies:
-      - googleworkspace/cli/gws-sheets
-      - googleworkspace/cli/gws-sheets-append
-      - googleworkspace/cli/gws-sheets-read
+    requires_toolsets: [terminal]
     config:
-      - key: moneyclip.sheet_link
-        description: Google Sheet link used by setup flow.
+      - key: moneyclip.spreadsheet_id
+        description: Google Spreadsheet ID created or used by MoneyClip.
         default: ""
         required: false
-      - key: moneyclip.sheet_url
-        description: Optional Google Apps Script Web App endpoint.
+      - key: moneyclip.spreadsheet_url
+        description: Google Spreadsheet URL created or used by MoneyClip.
         default: ""
         required: false
-      - key: moneyclip.secret_token
-        description: Optional request validation token for endpoint mode.
-        default: ""
+      - key: moneyclip.token_path
+        description: Local Google OAuth token path used by MoneyClip helper scripts.
+        default: ~/.moneyclip/token.json
         required: false
       - key: moneyclip.timezone
         description: User timezone.
@@ -46,24 +42,24 @@ Use this entrypoint only:
 
 MoneyClip has two phases:
 
-1. **Setup phase** — ask for a Google Sheet link, prepare the required tabs, and mark setup as complete.
-2. **Runtime phase** — parse balance/spending messages, update storage, and reply with the remaining balance.
+1. **Setup phase** — authorize Google once, create a Google Sheet automatically, prepare tabs, and mark setup as complete.
+2. **Runtime phase** — parse balance/spending messages, update the configured spreadsheet through helper scripts, and reply with the remaining balance.
 
 ## Tool preference
 
-For Google Sheets operations, prefer Google Workspace CLI skills when they are available:
+For Google Sheets operations, use the local helper scripts in `scripts/` when terminal execution is available:
 
-- `googleworkspace/cli/gws-sheets`
-- `googleworkspace/cli/gws-sheets-append`
-- `googleworkspace/cli/gws-sheets-read`
+- `scripts/google_auth.py` — authorizes Google Sheets API access and stores a local token.
+- `scripts/create_sheet.py` — creates a MoneyClip spreadsheet with required tabs and headers.
+- `scripts/moneyclip_sheets.py` — performs runtime actions such as set balance, add expense, get balance, and recap.
 
-MoneyClip should own the expense-tracking logic. Spreadsheet tools should own spreadsheet operations.
+Do not rely on browser-based Google Sheets editing as the primary path.
 
 ## Linked references
 
 Load only the reference file needed for the current task:
 
-- `references/setup.md` — first-run setup and Google Sheet link handling.
+- `references/setup.md` — Google authorization and automatic spreadsheet setup.
 - `references/sheets-schema.md` — required Google Sheet tabs and headers.
 - `references/runtime.md` — daily expense tracking after setup.
 - `references/examples.md` — examples and user guidance.
@@ -73,7 +69,8 @@ Load only the reference file needed for the current task:
 Use only the smallest relevant instruction file.
 
 - If `moneyclip.setup_complete` is not `true`, load `references/setup.md`.
-- If the user sends a Google Sheet link, load `references/setup.md` and `references/sheets-schema.md`.
+- If Google authorization is missing, run `scripts/google_auth.py` and ask the user to complete the authorization link.
+- If no `moneyclip.spreadsheet_id` exists after authorization, run `scripts/create_sheet.py` and save the returned `spreadsheet_id` and `spreadsheet_url`.
 - If setup is complete and the user sends balance/spending/recap/edit/delete messages, load `references/runtime.md`.
 - If the user asks what the skill can do, load `references/examples.md`.
 - Do not read setup instructions during normal daily expense tracking unless setup is incomplete.
@@ -96,4 +93,5 @@ Do not use this skill for unrelated personal finance advice, investments, loans,
 - Be brief.
 - During runtime, reply in at most two lines.
 - Always show remaining balance after a recorded transaction.
-- Ask one clear question when setup or nominal amount is missing.
+- Ask one clear question when setup, Google authorization, or nominal amount is missing.
+- Never ask the user to paste Google OAuth secrets into chat. Credential files must stay local.
