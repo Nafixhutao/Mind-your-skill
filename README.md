@@ -52,6 +52,14 @@ Documentation:
 skills/moneyclip/README.md
 ```
 
+## Skill Creator Prompt
+
+Use the reusable prompt below when you have a new idea and want an AI assistant to turn it into a professional Hermes Agent skill package:
+
+```text
+prompts/professional-hermes-skill-creator.md
+```
+
 ## MoneyClip in action
 
 ```text
@@ -74,7 +82,9 @@ Mind-your-skill/
 ├─ SECURITY.md
 ├─ CODE_OF_CONDUCT.md
 ├─ assets/
-│  └─ mind-your-skill-logo.svg
+│  └─ mind-your-skill-logo.png
+├─ prompts/
+│  └─ professional-hermes-skill-creator.md
 └─ skills/
    └─ moneyclip/
       ├─ SKILL.md
